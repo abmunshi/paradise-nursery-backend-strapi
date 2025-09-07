@@ -28,11 +28,9 @@
       "maxLength": 150,
       "required": true
     },
-    "subtitle": {
-      "type": "string"
-    },
     "description": {
-      "type": "text"
+      "type": "text",
+      "required": true
     },
     "price": {
       "type": "decimal",

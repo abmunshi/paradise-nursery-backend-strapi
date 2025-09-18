@@ -1,17 +1,17 @@
 {
   "kind": "collectionType",
-  "collectionName": "plants",
+  "collectionName": "products",
   "info": {
-    "singularName": "plant",
-    "pluralName": "plants",
-    "displayName": "Plants"
+    "singularName": "product",
+    "pluralName": "products",
+    "displayName": "Product"
   },
   "options": {
     "draftAndPublish": true
   },
   "pluginOptions": {},
   "attributes": {
-    "thumbnail": {
+    "image": {
       "type": "media",
       "multiple": false,
       "required": true,
@@ -40,7 +40,13 @@
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::category.category",
-      "inversedBy": "plants"
+      "inversedBy": "products"
+    },
+    "cart_items": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::cart-item.cart-item",
+      "mappedBy": "product"
     }
   }
 }

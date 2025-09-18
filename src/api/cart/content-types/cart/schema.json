@@ -1,0 +1,50 @@
+{
+  "kind": "collectionType",
+  "collectionName": "carts",
+  "info": {
+    "singularName": "cart",
+    "pluralName": "carts",
+    "displayName": "Cart"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "carts"
+    },
+    "cart_items": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::cart-item.cart-item",
+      "mappedBy": "cart"
+    },
+    "title": {
+      "type": "string",
+      "default": "shopping cart",
+      "required": true
+    },
+    "cart_status": {
+      "type": "enumeration",
+      "required": true,
+      "default": "active",
+      "enum": [
+        "active",
+        "abandoned",
+        "converted"
+      ]
+    },
+    "total": {
+      "type": "decimal",
+      "default": 0
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    }
+  }
+}

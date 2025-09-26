@@ -15,5 +15,10 @@ module.exports = {
       path: "/carts/remove-item",
       handler: "cart.removeItem",
     },
+    {
+      method: "POST",
+      path: "/carts/update-item",
+      handler: "cart.updateItem",
+    },
   ],
 };

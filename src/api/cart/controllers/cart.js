@@ -65,14 +65,17 @@ module.exports = createCoreController("api::cart.cart", ({ strapi }) => ({
       );
     }
   },
+
   async removeItem(ctx) {
     const user = ctx.state.user;
     if (!user) {
       return ctx.unauthorized("You must be logged in to modify the cart.");
     }
 
-    const { cartItemId } = ctx.request.body;
-    if (!cartItemId) {
+    const { id } = ctx.request.body;
+
+    console.log("removeItem called with cartItemId:", ctx.request.body);
+    if (!id) {
       return ctx.badRequest("Cart item ID is required.");
     }
 
@@ -85,7 +88,7 @@ module.exports = createCoreController("api::cart.cart", ({ strapi }) => ({
       // Remove the item from the cart
       const updatedCart = await strapi
         .service("api::cart.cart")
-        .removeItemFromCart(cart.documentId, cartItemId);
+        .removeItemFromCart(cart.documentId, id);
 
       // Sanitize the output
       const sanitizedCart = await this.sanitizeOutput(updatedCart);
@@ -95,6 +98,41 @@ module.exports = createCoreController("api::cart.cart", ({ strapi }) => ({
       console.error("Error in removeItem cart controller:", error);
       ctx.internalServerError(
         "An error occurred while removing item from the cart."
+      );
+    }
+  },
+
+  async updateItem(ctx) {
+    // Ensure user is authenticated or not
+    const user = ctx.state.user;
+    if (!user) {
+      return ctx.unauthorized("You must be logged in to modify the cart.");
+    }
+    const { id, quantity } = ctx.request.body;
+
+    if (!id || !quantity || quantity <= 0) {
+      return ctx.badRequest("Invalid cart item ID or quantity.");
+    }
+
+    try {
+      // Call the service to get the current cart
+      const cart = await strapi
+        .service("api::cart.cart")
+        .getOrCreateCurrentCart(user.documentId);
+
+      // Call the service to update the item in the current cart
+      const updatedCart = await strapi
+        .service("api::cart.cart")
+        .updateItemInCart(cart, id, quantity);
+
+      // Sanitize the output
+      const sanitizedCart = await this.sanitizeOutput(updatedCart);
+
+      return this.transformResponse(sanitizedCart);
+    } catch (err) {
+      console.error("Error in updateItem cart controller:", err);
+      ctx.internalServerError(
+        "An error occurred while updating the cart item."
       );
     }
   },

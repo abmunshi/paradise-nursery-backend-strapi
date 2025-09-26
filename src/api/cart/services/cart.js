@@ -13,7 +13,15 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
         user: { documentId: userId },
         cart_status: { $eq: "active" },
       },
-      populate: { cart_items: true },
+      populate: {
+        cart_items: {
+          populate: {
+            product: {
+              populate: { image: true },
+            },
+          },
+        },
+      },
       status: "published",
     });
     if (!cart) {
@@ -46,7 +54,7 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
     // Fetch the cart
     const cart = await strapi.documents("api::cart.cart").findOne({
       documentId: cartId,
-      populate: { cart_items: true },
+      populate: { cart_items: { populate: { product: true } } },
     });
     if (!cart) {
       throw new Error("Cart not found");
@@ -54,8 +62,12 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
 
     // Check if the item already exists in the cart
     let existingItem = cart.cart_items.find(
-      (item) => item.documentId === productId
+      (item) => item.product.documentId === productId
     );
+
+    console.log("Cart items:", cart.cart_items);
+
+    console.log("Existing item in cart:", existingItem);
 
     if (existingItem) {
       // If it exists, update the quantity
@@ -77,6 +89,7 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
           data: {
             product: productId,
             quantity: quantity,
+            price: 0,
             cart: cartId,
           },
         });
@@ -109,7 +122,10 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
     const cart = await strapi.documents("api::cart.cart").findOne({
       documentId: cartId,
       populate: { cart_items: true },
+      published: true,
     });
+
+    console.log("Cart before removing item:", cartItemId, cart);
     if (!cart) {
       throw new Error("Cart not found");
     }
@@ -139,6 +155,28 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
     // Optionally, you might want to delete the cart item document itself
     await strapi.documents("api::cart-item.cart-item").delete({
       documentId: cartItemId,
+    });
+
+    return cart;
+  },
+
+  async updateItemInCart(cart, cartItemId, quantity) {
+    // Check if the item exists in the cart
+    const item = cart.cart_items.find((item) => item.documentId === cartItemId);
+    if (!item) {
+      throw new Error("Cart item not found in the cart");
+    }
+
+    // Update the quantity of the item
+    item.quantity = quantity;
+    await strapi.documents("api::cart-item.cart-item").update({
+      documentId: item.documentId,
+      data: { quantity: item.quantity },
+    });
+
+    // Publish the updated cart item
+    await strapi.documents("api::cart-item.cart-item").publish({
+      documentId: item.documentId,
     });
 
     return cart;

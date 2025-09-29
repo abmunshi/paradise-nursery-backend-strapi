@@ -5,6 +5,8 @@
  */
 
 const { createCoreService } = require("@strapi/strapi").factories;
+const { errors } = require("@strapi/utils");
+const { NotFoundError, ValidationError, ConflictError } = errors;
 
 module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
   async getOrCreateCurrentCart(userId) {
@@ -46,7 +48,6 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
         populate: { cart_items: true },
       });
     }
-
     return cart;
   },
 
@@ -57,25 +58,42 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
       populate: { cart_items: { populate: { product: true } } },
     });
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new NotFoundError("Cart not found");
     }
 
-    // Check if the item already exists in the cart
+    // Validate quantity
+    if (quantity <= 0) {
+      throw new ValidationError("Quantity must be greater than zero");
+    }
+    // Fetch the product directly for validation
+    const product = await strapi.documents("api::product.product").findOne({
+      documentId: productId,
+    });
+
+    console.log("Product fetched:", product);
+    if (!product) throw new NotFoundError("Product not found");
+
+    console.log("cart items:", cart.cart_items);
+
+    // Check stock (existing + new quantity)
     let existingItem = cart.cart_items.find(
       (item) => item.product.documentId === productId
     );
 
-    console.log("Cart items:", cart.cart_items);
-
-    console.log("Existing item in cart:", existingItem);
+    const newQuantity = existingItem
+      ? existingItem.quantity + quantity
+      : quantity;
+    if (product.stock < newQuantity) {
+      throw new ConflictError("Not enough stock available.");
+    }
 
     if (existingItem) {
       // If it exists, update the quantity
       console.log("existing Item", existingItem);
-      existingItem.quantity += quantity;
+
       await strapi.documents("api::cart-item.cart-item").update({
         documentId: existingItem.documentId,
-        data: { quantity: existingItem.quantity },
+        data: { quantity: newQuantity },
       });
       // Publish the updated cart item
       await strapi.documents("api::cart-item.cart-item").publish({
@@ -88,8 +106,8 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
         .create({
           data: {
             product: productId,
-            quantity: quantity,
-            price: 0,
+            quantity,
+            price: product.price,
             cart: cartId,
           },
         });
@@ -111,23 +129,33 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
       await strapi.documents("api::cart.cart").publish({
         documentId: cart.documentId,
       });
-
-      existingItem = newItem; // Set existingItem to the newly created item for return
     }
-    return existingItem;
+
+    const updatedCart = await strapi.documents("api::cart.cart").findOne({
+      documentId: cart.documentId,
+      populate: {
+        cart_items: {
+          populate: {
+            product: {
+              populate: { image: true },
+            },
+          },
+        },
+      },
+    });
+    return updatedCart;
   },
 
   async removeItemFromCart(cartId, cartItemId) {
     // Fetch the cart
     const cart = await strapi.documents("api::cart.cart").findOne({
       documentId: cartId,
-      populate: { cart_items: true },
+      populate: { cart_items: { populate: { product: true } } },
       published: true,
     });
 
-    console.log("Cart before removing item:", cartItemId, cart);
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new NotFoundError("Cart not found");
     }
 
     // Check if the item exists in the cart
@@ -135,7 +163,7 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
       (item) => item.documentId === cartItemId
     );
     if (!itemExist) {
-      throw new Error("Cart item not found in the cart");
+      throw new NotFoundError("Cart item not found in the cart");
     }
 
     // Remove the item from the cart's cart_items array
@@ -157,21 +185,33 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
       documentId: cartItemId,
     });
 
-    return cart;
+    // Return the updated, populated cart
+    const updatedCart = await strapi.documents("api::cart.cart").findOne({
+      documentId: cart.documentId,
+      populate: {
+        cart_items: {
+          populate: {
+            product: {
+              populate: { image: true },
+            },
+          },
+        },
+      },
+    });
+    return updatedCart;
   },
 
   async updateItemInCart(cart, cartItemId, quantity) {
     // Check if the item exists in the cart
     const item = cart.cart_items.find((item) => item.documentId === cartItemId);
     if (!item) {
-      throw new Error("Cart item not found in the cart");
+      throw new NotFoundError("Cart item not found in the cart");
     }
 
     // Update the quantity of the item
-    item.quantity = quantity;
     await strapi.documents("api::cart-item.cart-item").update({
       documentId: item.documentId,
-      data: { quantity: item.quantity },
+      data: { quantity },
     });
 
     // Publish the updated cart item
@@ -179,6 +219,19 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
       documentId: item.documentId,
     });
 
-    return cart;
+    // Return the updated, populated cart
+    const updatedCart = await strapi.documents("api::cart.cart").findOne({
+      documentId: cart.documentId,
+      populate: {
+        cart_items: {
+          populate: {
+            product: {
+              populate: { image: true },
+            },
+          },
+        },
+      },
+    });
+    return updatedCart;
   },
 }));

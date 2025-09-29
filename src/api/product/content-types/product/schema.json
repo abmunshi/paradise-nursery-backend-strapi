@@ -28,6 +28,10 @@
       "maxLength": 150,
       "required": true
     },
+    "summary": {
+      "type": "string",
+      "required": true
+    },
     "description": {
       "type": "text",
       "required": true

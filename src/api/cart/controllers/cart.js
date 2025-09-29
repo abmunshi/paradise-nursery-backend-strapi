@@ -10,12 +10,8 @@ module.exports = createCoreController("api::cart.cart", ({ strapi }) => ({
   // Get current active cart for authenticated user
   async getCurrent(ctx) {
     try {
-      // Ensure user is authenticated or not
       const user = ctx.state.user;
-      if (!user) {
-        return ctx.unauthorized("You must be logged in to view the cart.");
-      }
-      console.log("before sanitization");
+
       // Call the service to get the cart
       const cart = await strapi
         .service("api::cart.cart")
@@ -25,24 +21,26 @@ module.exports = createCoreController("api::cart.cart", ({ strapi }) => ({
       const sanitizedCart = await this.sanitizeOutput(cart, ctx);
 
       return this.transformResponse(sanitizedCart);
-    } catch (error) {
-      console.error("Error in getCurrent cart controller:", error);
-      ctx.internalServerError("An error occurred while fetching the cart.");
+    } catch (err) {
+      console.error("Error in getCurrent cart controller:", err);
+      return ctx.internalServerError(
+        "An error occurred wile fetching the cart.",
+        {
+          details: err.message,
+        }
+      );
     }
   },
 
   async addItem(ctx) {
-    // Ensure user is authenticated or not
     const user = ctx.state.user;
-    if (!user) {
-      return ctx.unauthorized("You must be logged in to modify the cart.");
-    }
 
     const { productId, quantity } = ctx.request.body;
 
     if (!productId || !quantity || quantity <= 0) {
       return ctx.badRequest("Invalid product ID or quantity.");
     }
+    console.log("Adding item to cart:", { productId, quantity });
     try {
       // Call the service to get the current cart
       const cart = await strapi
@@ -55,26 +53,32 @@ module.exports = createCoreController("api::cart.cart", ({ strapi }) => ({
         .addItemToCart(cart.documentId, productId, quantity);
 
       // Sanitize the output
-      const sanitizedCart = await this.sanitizeOutput(updatedCart);
+      const sanitizedCart = await this.sanitizeOutput(updatedCart, ctx, {
+        populate: {
+          cart_items: {
+            populate: {
+              product: {
+                populate: { image: true },
+              },
+            },
+          },
+        },
+      });
 
       return this.transformResponse(sanitizedCart);
-    } catch (error) {
-      console.error("Error in addItem cart controller:", error);
-      ctx.internalServerError(
-        "An error occurred while adding item to the cart."
+    } catch (err) {
+      console.error("Error in addItem cart controller:", err);
+      return ctx.internalServerError(
+        "An error occurred while adding item to the cart.",
+        { details: err.message }
       );
     }
   },
 
   async removeItem(ctx) {
     const user = ctx.state.user;
-    if (!user) {
-      return ctx.unauthorized("You must be logged in to modify the cart.");
-    }
-
     const { id } = ctx.request.body;
 
-    console.log("removeItem called with cartItemId:", ctx.request.body);
     if (!id) {
       return ctx.badRequest("Cart item ID is required.");
     }
@@ -91,23 +95,31 @@ module.exports = createCoreController("api::cart.cart", ({ strapi }) => ({
         .removeItemFromCart(cart.documentId, id);
 
       // Sanitize the output
-      const sanitizedCart = await this.sanitizeOutput(updatedCart);
+      const sanitizedCart = await this.sanitizeOutput(updatedCart, ctx, {
+        populate: {
+          cart_items: {
+            populate: {
+              product: {
+                populate: { image: true },
+              },
+            },
+          },
+        },
+      });
 
       return this.transformResponse(sanitizedCart);
-    } catch (error) {
-      console.error("Error in removeItem cart controller:", error);
-      ctx.internalServerError(
-        "An error occurred while removing item from the cart."
+    } catch (err) {
+      console.error("Error in removeItem cart controller:", err);
+      return ctx.internalServerError(
+        "An error occurred while removing item from the cart.",
+        { details: err.message }
       );
     }
   },
 
   async updateItem(ctx) {
-    // Ensure user is authenticated or not
     const user = ctx.state.user;
-    if (!user) {
-      return ctx.unauthorized("You must be logged in to modify the cart.");
-    }
+
     const { id, quantity } = ctx.request.body;
 
     if (!id || !quantity || quantity <= 0) {
@@ -126,13 +138,24 @@ module.exports = createCoreController("api::cart.cart", ({ strapi }) => ({
         .updateItemInCart(cart, id, quantity);
 
       // Sanitize the output
-      const sanitizedCart = await this.sanitizeOutput(updatedCart);
+      const sanitizedCart = await this.sanitizeOutput(updatedCart, ctx, {
+        populate: {
+          cart_items: {
+            populate: {
+              product: {
+                populate: { image: true },
+              },
+            },
+          },
+        },
+      });
 
       return this.transformResponse(sanitizedCart);
     } catch (err) {
       console.error("Error in updateItem cart controller:", err);
-      ctx.internalServerError(
-        "An error occurred while updating the cart item."
+      return ctx.internalServerError(
+        "An error occurred while updating the cart item.",
+        { details: err.message }
       );
     }
   },

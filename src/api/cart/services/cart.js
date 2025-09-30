@@ -6,7 +6,7 @@
 
 const { createCoreService } = require("@strapi/strapi").factories;
 const { errors } = require("@strapi/utils");
-const { NotFoundError, ValidationError, ConflictError } = errors;
+const { NotFoundError, ValidationError, ApplicationError } = errors;
 
 module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
   async getOrCreateCurrentCart(userId) {
@@ -84,7 +84,7 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
       ? existingItem.quantity + quantity
       : quantity;
     if (product.stock < newQuantity) {
-      throw new ConflictError("Not enough stock available.");
+      throw new ApplicationError("Not enough stock available.");
     }
 
     if (existingItem) {
@@ -135,9 +135,15 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
       documentId: cart.documentId,
       populate: {
         cart_items: {
+          fields: ["documentId", "quantity", "price", "variant"],
           populate: {
             product: {
-              populate: { image: true },
+              fields: ["documentId", "title", "summary", "price", "stock"],
+              populate: {
+                image: {
+                  fields: ["formats"],
+                },
+              },
             },
           },
         },
@@ -190,9 +196,15 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
       documentId: cart.documentId,
       populate: {
         cart_items: {
+          fields: ["documentId", "quantity", "price", "variant"],
           populate: {
             product: {
-              populate: { image: true },
+              fields: ["documentId", "title", "summary", "price", "stock"],
+              populate: {
+                image: {
+                  fields: ["formats"],
+                },
+              },
             },
           },
         },
@@ -224,9 +236,15 @@ module.exports = createCoreService("api::cart.cart", ({ strapi }) => ({
       documentId: cart.documentId,
       populate: {
         cart_items: {
+          fields: ["documentId", "quantity", "price", "variant"],
           populate: {
             product: {
-              populate: { image: true },
+              fields: ["documentId", "title", "summary", "price", "stock"],
+              populate: {
+                image: {
+                  fields: ["formats"],
+                },
+              },
             },
           },
         },

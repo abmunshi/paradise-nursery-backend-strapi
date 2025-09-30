@@ -53,17 +53,7 @@ module.exports = createCoreController("api::cart.cart", ({ strapi }) => ({
         .addItemToCart(cart.documentId, productId, quantity);
 
       // Sanitize the output
-      const sanitizedCart = await this.sanitizeOutput(updatedCart, ctx, {
-        populate: {
-          cart_items: {
-            populate: {
-              product: {
-                populate: { image: true },
-              },
-            },
-          },
-        },
-      });
+      const sanitizedCart = await this.sanitizeOutput(updatedCart, ctx);
 
       return this.transformResponse(sanitizedCart);
     } catch (err) {
@@ -95,17 +85,7 @@ module.exports = createCoreController("api::cart.cart", ({ strapi }) => ({
         .removeItemFromCart(cart.documentId, id);
 
       // Sanitize the output
-      const sanitizedCart = await this.sanitizeOutput(updatedCart, ctx, {
-        populate: {
-          cart_items: {
-            populate: {
-              product: {
-                populate: { image: true },
-              },
-            },
-          },
-        },
-      });
+      const sanitizedCart = await this.sanitizeOutput(updatedCart, ctx);
 
       return this.transformResponse(sanitizedCart);
     } catch (err) {
@@ -138,17 +118,7 @@ module.exports = createCoreController("api::cart.cart", ({ strapi }) => ({
         .updateItemInCart(cart, id, quantity);
 
       // Sanitize the output
-      const sanitizedCart = await this.sanitizeOutput(updatedCart, ctx, {
-        populate: {
-          cart_items: {
-            populate: {
-              product: {
-                populate: { image: true },
-              },
-            },
-          },
-        },
-      });
+      const sanitizedCart = await this.sanitizeOutput(updatedCart, ctx);
 
       return this.transformResponse(sanitizedCart);
     } catch (err) {
